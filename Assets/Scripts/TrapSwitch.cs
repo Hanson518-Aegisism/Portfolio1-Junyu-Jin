@@ -18,19 +18,7 @@ public class TrapSwitch : MonoBehaviour
     [Header("UI")]
     [SerializeField] private TextMeshProUGUI promptText;
 
-    [Header("Visual")]
-    [SerializeField] private Renderer indicatorRenderer;
-    [SerializeField] private Color trapActiveColor = new Color(1f, 0.2f, 0.2f);
-    [SerializeField] private Color trapInactiveColor = new Color(0.2f, 1f, 0.3f);
-
     private Transform playerTransform;
-    private Material indicatorMaterial;
-
-    private void Awake()
-    {
-        if (indicatorRenderer != null)
-            indicatorMaterial = indicatorRenderer.material;
-    }
 
     private void Start()
     {
@@ -38,19 +26,7 @@ public class TrapSwitch : MonoBehaviour
         if (player != null)
             playerTransform = player.transform;
 
-        if (trapController != null)
-        {
-            trapController.OnActiveChanged += HandleTrapStateChanged;
-            HandleTrapStateChanged(trapController.IsActive);
-        }
-
         SetPromptVisible(false);
-    }
-
-    private void OnDestroy()
-    {
-        if (trapController != null)
-            trapController.OnActiveChanged -= HandleTrapStateChanged;
     }
 
     private void Update()
@@ -78,14 +54,6 @@ public class TrapSwitch : MonoBehaviour
 
         if (visible)
             promptText.text = promptMessage;
-    }
-
-    private void HandleTrapStateChanged(bool isActive)
-    {
-        if (indicatorMaterial == null)
-            return;
-
-        indicatorMaterial.color = isActive ? trapActiveColor : trapInactiveColor;
     }
 
     private void OnDrawGizmosSelected()
