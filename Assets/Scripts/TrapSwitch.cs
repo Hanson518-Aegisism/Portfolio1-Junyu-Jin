@@ -1,3 +1,4 @@
+using System.Collections;
 using TMPro;
 using UnityEngine;
 
@@ -18,7 +19,26 @@ public class TrapSwitch : MonoBehaviour
     [Header("UI")]
     [SerializeField] private TextMeshProUGUI promptText;
 
+    [Header("Lever Animation")]
+    [SerializeField] private Transform switchLever;
+    [SerializeField] private Vector3 leverPositionOn = new Vector3(0f, 0.012f, 0f);
+    [SerializeField] private Vector3 leverPositionOff = new Vector3(0f, -0.012f, 0f);
+    [SerializeField] private float leverMoveDuration = 0.2f;
+
     private Transform playerTransform;
+    private Coroutine leverRoutine;
+
+    private void OnEnable()
+    {
+        if (trapController != null)
+            trapController.OnActiveChanged += HandleTrapActiveChanged;
+    }
+
+    private void OnDisable()
+    {
+        if (trapController != null)
+            trapController.OnActiveChanged -= HandleTrapActiveChanged;
+    }
 
     private void Start()
     {
@@ -27,6 +47,9 @@ public class TrapSwitch : MonoBehaviour
             playerTransform = player.transform;
 
         SetPromptVisible(false);
+
+        if (switchLever != null && trapController != null)
+            switchLever.localPosition = trapController.IsActive ? leverPositionOn : leverPositionOff;
     }
 
     private void Update()
@@ -42,6 +65,33 @@ public class TrapSwitch : MonoBehaviour
 
         if (Input.GetKeyDown(interactKey))
             trapController.Toggle();
+    }
+
+    private void HandleTrapActiveChanged(bool active)
+    {
+        if (switchLever == null)
+            return;
+
+        if (leverRoutine != null)
+            StopCoroutine(leverRoutine);
+
+        leverRoutine = StartCoroutine(AnimateLever(active ? leverPositionOn : leverPositionOff));
+    }
+
+    private IEnumerator AnimateLever(Vector3 target)
+    {
+        Vector3 start = switchLever.localPosition;
+        float elapsed = 0f;
+
+        while (elapsed < leverMoveDuration)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.SmoothStep(0f, 1f, elapsed / leverMoveDuration);
+            switchLever.localPosition = Vector3.Lerp(start, target, t);
+            yield return null;
+        }
+
+        switchLever.localPosition = target;
     }
 
     private void SetPromptVisible(bool visible)
