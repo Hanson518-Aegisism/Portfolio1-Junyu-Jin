@@ -28,11 +28,8 @@ public class TrapSwitch : MonoBehaviour
     [Header("Audio")]
     [SerializeField] private AudioClip switchOnSound;
     [SerializeField] private AudioClip switchOffSound;
-    [SerializeField] private AudioClip electricCurrentSound;
     [Tooltip("Plays switch on/off sounds. Auto-created if empty.")]
     [SerializeField] private AudioSource switchAudioSource;
-    [Tooltip("Loops electric current while trap is active. Auto-created if empty.")]
-    [SerializeField] private AudioSource electricAudioSource;
 
     private Transform playerTransform;
     private bool isInitialized;
@@ -49,53 +46,21 @@ public class TrapSwitch : MonoBehaviour
         if (switchLever == null)
             switchLever = transform.Find("switch_LOD0.001");
 
-        EnsureAudioSources();
-
-        if (switchAudioSource != null)
-            ConfigureSwitchAudioSource();
-
-        if (electricAudioSource != null)
-            ConfigureElectricAudioSource();
+        EnsureSwitchAudioSource();
     }
 
-    private void EnsureAudioSources()
+    private void EnsureSwitchAudioSource()
     {
-        AudioSource[] sources = GetComponents<AudioSource>();
-
-        if (switchAudioSource == null && HasSwitchClip())
-        {
-            switchAudioSource = sources.Length > 0 ? sources[0] : gameObject.AddComponent<AudioSource>();
-            ConfigureSwitchAudioSource();
-        }
-
-        if (electricAudioSource == null && electricCurrentSound != null)
-        {
-            electricAudioSource = sources.Length > 1 ? sources[1] : null;
-            ConfigureElectricAudioSource();
-        }
-    }
-
-    private void ConfigureSwitchAudioSource()
-    {
-        if (switchAudioSource == null)
+        if (switchAudioSource != null || !HasSwitchClip())
             return;
+
+        switchAudioSource = GetComponent<AudioSource>();
+        if (switchAudioSource == null)
+            switchAudioSource = gameObject.AddComponent<AudioSource>();
 
         switchAudioSource.playOnAwake = false;
         switchAudioSource.loop = false;
         switchAudioSource.spatialBlend = 0f;
-    }
-
-    private void ConfigureElectricAudioSource()
-    {
-        if (electricAudioSource == null)
-            return;
-
-        electricAudioSource.playOnAwake = false;
-        electricAudioSource.loop = true;
-        electricAudioSource.spatialBlend = 1f;
-        electricAudioSource.minDistance = 2f;
-        electricAudioSource.maxDistance = 40f;
-        electricAudioSource.rolloffMode = AudioRolloffMode.Linear;
     }
 
     private bool HasSwitchClip()
@@ -103,29 +68,16 @@ public class TrapSwitch : MonoBehaviour
         return switchOnSound != null || switchOffSound != null;
     }
 
-    private bool HasAnyAudioClip()
-    {
-        return HasSwitchClip() || electricCurrentSound != null;
-    }
-
     private void OnEnable()
     {
         if (trapController != null)
-        {
             trapController.OnActiveChanged += HandleTrapActiveChanged;
-            trapController.OnActiveChanged += UpdateElectricSound;
-        }
     }
 
     private void OnDisable()
     {
         if (trapController != null)
-        {
             trapController.OnActiveChanged -= HandleTrapActiveChanged;
-            trapController.OnActiveChanged -= UpdateElectricSound;
-        }
-
-        UpdateElectricSound(false);
     }
 
     private void Start()
@@ -142,7 +94,6 @@ public class TrapSwitch : MonoBehaviour
     {
         yield return null;
         SyncLeverPositionImmediate();
-        UpdateElectricSound(trapController != null && trapController.IsActive);
         isInitialized = true;
     }
 
@@ -170,6 +121,9 @@ public class TrapSwitch : MonoBehaviour
         pendingTrapState = targetActive;
         applyTrapAfterAnimation = true;
         StartLeverAnimation(targetActive ? leverPositionOn : leverPositionOff);
+
+
+
     }
 
     private void HandleTrapActiveChanged(bool active)
@@ -225,7 +179,6 @@ public class TrapSwitch : MonoBehaviour
         suppressLeverSync = true;
         trapController.SetActive(pendingTrapState);
         suppressLeverSync = false;
-        UpdateElectricSound(pendingTrapState);
     }
 
     private void SyncLeverPositionImmediate()
@@ -258,31 +211,6 @@ public class TrapSwitch : MonoBehaviour
         AudioClip clip = turningOn ? switchOnSound : switchOffSound;
         if (clip != null)
             switchAudioSource.PlayOneShot(clip);
-    }
-
-    private void UpdateElectricSound(bool active)
-    {
-        if (electricAudioSource == null || electricCurrentSound == null)
-            return;
-
-        ConfigureElectricAudioSource();
-
-        if (active)
-        {
-            if (!electricAudioSource.gameObject.activeInHierarchy)
-                electricAudioSource.gameObject.SetActive(true);
-
-            if (electricAudioSource.isPlaying && electricAudioSource.clip == electricCurrentSound)
-                return;
-
-            electricAudioSource.clip = electricCurrentSound;
-            electricAudioSource.loop = true;
-            electricAudioSource.Play();
-            return;
-        }
-
-        if (electricAudioSource.isPlaying)
-            electricAudioSource.Stop();
     }
 
     private void OnDrawGizmosSelected()
