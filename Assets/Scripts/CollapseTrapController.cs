@@ -62,6 +62,17 @@ public class CollapseTrapController : MonoBehaviour
         [Header("Group Effects")]
         [Tooltip("Objects activated when this group starts falling.")]
         public GameObject[] fallStartEffects;
+
+        [Header("Group Camera Shake")]
+        [Tooltip("Play an extra shake when this group starts falling. Uses its own profile below.")]
+        public bool enableGroupCameraShake;
+        public CameraShake.Profile groupCameraShake = new CameraShake.Profile
+        {
+            duration = 0.45f,
+            positionIntensity = 0.15f,
+            rotationIntensity = 2f,
+            frequency = 20f
+        };
     }
 
     [Serializable]
@@ -82,6 +93,17 @@ public class CollapseTrapController : MonoBehaviour
         public float pieceStagger = 0.07f;
         public float settleDelay = 0.2f;
         public float tumbleDegrees = 35f;
+
+        [Header("Camera Shake")]
+        [Tooltip("Screen shake when debris starts falling.")]
+        public bool enableCameraShake = true;
+        public CameraShake.Profile cameraShake = new CameraShake.Profile
+        {
+            duration = 1.2f,
+            positionIntensity = 0.22f,
+            rotationIntensity = 3.5f,
+            frequency = 24f
+        };
 
         [Header("Audio")]
         [Tooltip("3D audio source on the collapse trigger. Auto-finds one on that object if empty.")]
@@ -279,6 +301,9 @@ public class CollapseTrapController : MonoBehaviour
 
     private IEnumerator CollapseFallRoutine()
     {
+        if (collapsePhase.enableCameraShake)
+            CameraShake.ShakeIfAvailable(collapsePhase.cameraShake);
+
         PlayOneShot(collapsePhase.audioSource, collapsePhase.collapseSound, collapsePhase.collapseVolume);
         SetObjectsActive(collapsePhase.effectObjects, true);
 
@@ -298,6 +323,9 @@ public class CollapseTrapController : MonoBehaviour
             group.root.SetActive(true);
             PlayOneShot(collapsePhase.audioSource, group.fallSound, group.fallSoundVolume);
             SetObjectsActive(group.fallStartEffects, true);
+
+            if (group.enableGroupCameraShake)
+                CameraShake.ShakeIfAvailable(group.groupCameraShake);
 
             float fallHeight = group.useGlobalMotion ? collapsePhase.fallHeight : group.fallHeight;
             float fallDuration = group.useGlobalMotion ? collapsePhase.fallDuration : group.fallDuration;
@@ -433,8 +461,27 @@ public class CollapseTrapController : MonoBehaviour
 
         for (int i = 0; i < objects.Length; i++)
         {
-            if (objects[i] != null)
-                objects[i].SetActive(active);
+            if (objects[i] == null)
+                continue;
+
+            objects[i].SetActive(active);
+
+            if (active)
+                PlayEffectParticles(objects[i]);
+        }
+    }
+
+    private static void PlayEffectParticles(GameObject effectRoot)
+    {
+        ParticleSystem[] particleSystems = effectRoot.GetComponentsInChildren<ParticleSystem>(true);
+        for (int i = 0; i < particleSystems.Length; i++)
+        {
+            ParticleSystemRenderer renderer = particleSystems[i].GetComponent<ParticleSystemRenderer>();
+            if (renderer != null)
+                renderer.enabled = true;
+
+            particleSystems[i].Clear(true);
+            particleSystems[i].Play(true);
         }
     }
 
