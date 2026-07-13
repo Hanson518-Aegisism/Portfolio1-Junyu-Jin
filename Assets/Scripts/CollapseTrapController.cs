@@ -3,29 +3,28 @@ using System.Collections;
 using UnityEngine;
 
 /// <summary>
-/// One-shot collapse trap with two phases:
-/// 1) Warning: camera shake, rumble audio, optional pre-fall effects.
-/// 2) Collapse: falling object groups, impact audio, and particle effects.
+/// One-shot collapse trap with three stages:
+/// 1) Approach warning: early trigger zone, camera shake and rumble audio.
+/// 2) Collapse delay: optional wait after the main trigger is entered.
+/// 3) Collapse: falling object groups, impact audio, and particle effects.
 /// </summary>
 public class CollapseTrapController : MonoBehaviour
 {
     [Serializable]
-    public class WarningPhaseSettings
+    public class ApproachWarningSettings
     {
-        [Tooltip("Seconds to wait after the warning before debris starts falling.")]
-        public float delayBeforeCollapse = 2.5f;
-
         [Header("Camera Shake")]
         public bool enableCameraShake = true;
         public CameraShake.Profile cameraShake = CameraShake.Profile.Default;
 
         [Header("Audio")]
+        [Tooltip("3D audio source on the approach warning trigger. Auto-finds one on that object if empty.")]
         public AudioSource audioSource;
         public AudioClip warningSound;
-        [Range(0f, 1f)] public float warningVolume = 1f;
+        [Range(0f, 3f)] public float warningVolume = 2f;
 
         [Header("Effects")]
-        [Tooltip("Objects activated when the warning starts (cracks, dust, lights, etc.).")]
+        [Tooltip("Objects activated when the approach warning starts.")]
         public GameObject[] effectObjects;
     }
 
@@ -68,6 +67,9 @@ public class CollapseTrapController : MonoBehaviour
     [Serializable]
     public class CollapsePhaseSettings
     {
+        [Tooltip("Seconds to wait after entering the collapse trigger before debris starts falling.")]
+        public float delayBeforeCollapse = 2.5f;
+
         [Header("Falling Groups")]
         [Tooltip("Each entry is a parent whose children fall in sequence.")]
         public FallingGroupSettings[] fallingGroups;
@@ -82,20 +84,25 @@ public class CollapseTrapController : MonoBehaviour
         public float tumbleDegrees = 35f;
 
         [Header("Audio")]
+        [Tooltip("3D audio source on the collapse trigger. Auto-finds one on that object if empty.")]
         public AudioSource audioSource;
         public AudioClip collapseSound;
-        [Range(0f, 1f)] public float collapseVolume = 1f;
+        [Range(0f, 3f)] public float collapseVolume = 2f;
 
         [Header("Effects")]
         [Tooltip("Objects activated when the collapse phase starts.")]
         public GameObject[] effectObjects;
     }
 
-    [Header("Trigger")]
-    [SerializeField] private Collider triggerZone;
+    [Header("Approach Warning Trigger")]
+    [Tooltip("Earlier trigger zone that plays rumble/shake before the player reaches the collapse zone.")]
+    [SerializeField] private Collider approachWarningTrigger;
 
-    [Header("Warning Phase")]
-    [SerializeField] private WarningPhaseSettings warningPhase = new WarningPhaseSettings();
+    [Header("Approach Warning")]
+    [SerializeField] private ApproachWarningSettings approachWarning = new ApproachWarningSettings();
+
+    [Header("Collapse Trigger")]
+    [SerializeField] private Collider collapseTrigger;
 
     [Header("Collapse Phase")]
     [SerializeField] private CollapsePhaseSettings collapsePhase = new CollapsePhaseSettings();
@@ -107,6 +114,13 @@ public class CollapseTrapController : MonoBehaviour
     [Header("Trigger Filter")]
     [SerializeField] private string triggerTag = "Player";
 
+    [Header("3D Audio")]
+    [Tooltip("3D audio sources are expected on each trigger object. These values apply to both.")]
+    [SerializeField] private float audioMinDistance = 2f;
+    [SerializeField] private float audioMaxDistance = 50f;
+    [SerializeField] private float audioSourceVolume = 1f;
+
+    public bool HasApproachWarningTriggered { get; private set; }
     public bool HasTriggered { get; private set; }
     public event Action OnRouteBlocked;
 
@@ -123,9 +137,7 @@ public class CollapseTrapController : MonoBehaviour
 
     private void Awake()
     {
-        if (triggerZone == null)
-            triggerZone = GetComponentInChildren<BoxCollider>(true);
-
+        ResolveAudioSources();
         CacheFallingGroups();
     }
 
@@ -133,6 +145,61 @@ public class CollapseTrapController : MonoBehaviour
     {
         SetFallingGroupsVisible(false);
         SetVisibleFallFromCurrentGroups(true);
+    }
+
+    private void ResolveAudioSources()
+    {
+        if (approachWarning.audioSource == null && approachWarningTrigger != null)
+            approachWarning.audioSource = FindAudioSourceOnTrigger(approachWarningTrigger.transform);
+
+        if (collapsePhase.audioSource == null && collapseTrigger != null)
+            collapsePhase.audioSource = FindAudioSourceOnTrigger(collapseTrigger.transform);
+
+        ConfigureSpatialAudio(approachWarning.audioSource);
+        ConfigureSpatialAudio(collapsePhase.audioSource);
+    }
+
+    private AudioSource FindAudioSourceOnTrigger(Transform triggerRoot)
+    {
+        AudioSource source = triggerRoot.GetComponent<AudioSource>();
+        if (source != null)
+            return source;
+
+        return triggerRoot.GetComponentInChildren<AudioSource>(true);
+    }
+
+    private void ConfigureSpatialAudio(AudioSource source)
+    {
+        if (source == null)
+            return;
+
+        source.playOnAwake = false;
+        source.loop = false;
+        source.spatialBlend = 1f;
+        source.rolloffMode = AudioRolloffMode.Linear;
+        source.minDistance = audioMinDistance;
+        source.maxDistance = audioMaxDistance;
+        source.volume = audioSourceVolume;
+    }
+
+    public void NotifyApproachWarningEnter(Collider other)
+    {
+        if (HasApproachWarningTriggered)
+            return;
+
+        if (!other.CompareTag(triggerTag))
+            return;
+
+        HasApproachWarningTriggered = true;
+
+        if (approachWarningTrigger != null)
+            approachWarningTrigger.enabled = false;
+
+        if (approachWarning.enableCameraShake)
+            CameraShake.ShakeIfAvailable(approachWarning.cameraShake);
+
+        PlayOneShot(approachWarning.audioSource, approachWarning.warningSound, approachWarning.warningVolume);
+        SetObjectsActive(approachWarning.effectObjects, true);
     }
 
     public void NotifyTriggerEnter(Collider other)
@@ -197,12 +264,10 @@ public class CollapseTrapController : MonoBehaviour
     {
         HasTriggered = true;
 
-        if (triggerZone != null)
-            triggerZone.enabled = false;
+        if (collapseTrigger != null)
+            collapseTrigger.enabled = false;
 
-        yield return StartCoroutine(WarningRoutine());
-
-        yield return new WaitForSeconds(Mathf.Max(0f, warningPhase.delayBeforeCollapse));
+        yield return new WaitForSeconds(Mathf.Max(0f, collapsePhase.delayBeforeCollapse));
 
         yield return StartCoroutine(CollapseFallRoutine());
 
@@ -210,16 +275,6 @@ public class CollapseTrapController : MonoBehaviour
             blocker.SetActive(true);
 
         OnRouteBlocked?.Invoke();
-    }
-
-    private IEnumerator WarningRoutine()
-    {
-        if (warningPhase.enableCameraShake)
-            CameraShake.ShakeIfAvailable(warningPhase.cameraShake);
-
-        PlayOneShot(warningPhase.audioSource, warningPhase.warningSound, warningPhase.warningVolume);
-        SetObjectsActive(warningPhase.effectObjects, true);
-        yield break;
     }
 
     private IEnumerator CollapseFallRoutine()
@@ -394,8 +449,7 @@ public class CollapseTrapController : MonoBehaviour
 #if UNITY_EDITOR
     private void OnValidate()
     {
-        if (triggerZone == null)
-            triggerZone = GetComponentInChildren<BoxCollider>(true);
+        ResolveAudioSources();
     }
 #endif
 }

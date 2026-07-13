@@ -9,6 +9,14 @@ using UnityEngine;
 [RequireComponent(typeof(Rigidbody))]
 public class CollapseTrapTrigger : MonoBehaviour
 {
+    public enum TriggerRole
+    {
+        ApproachWarning,
+        Collapse
+    }
+
+    [SerializeField] private TriggerRole role = TriggerRole.Collapse;
+
     private CollapseTrapController controller;
 
     private void Awake()
@@ -22,7 +30,12 @@ public class CollapseTrapTrigger : MonoBehaviour
 
     private void OnTriggerEnter(Collider other)
     {
-        if (controller != null)
+        if (controller == null)
+            return;
+
+        if (role == TriggerRole.ApproachWarning)
+            controller.NotifyApproachWarningEnter(other);
+        else
             controller.NotifyTriggerEnter(other);
     }
 }
