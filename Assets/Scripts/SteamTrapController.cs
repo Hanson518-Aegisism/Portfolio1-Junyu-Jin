@@ -35,13 +35,14 @@ public class SteamTrapController : MonoBehaviour
     [SerializeField] private GameObject[] chargeLights;
 
     [Header("Audio")]
-    [SerializeField] private AudioSource audioSource;
+    [SerializeField] private AudioSource burstAudioSource;
+    [SerializeField] private AudioSource loopAudioSource;
     [SerializeField] private AudioClip burstStartSound;
     [SerializeField] private AudioClip steamLoopSound;
-    [Range(0f, 2f)] [SerializeField] private float burstStartVolume = 1f;
-    [Range(0f, 2f)] [SerializeField] private float steamLoopVolume = 0.85f;
-    [SerializeField] private float audioMinDistance = 2f;
-    [SerializeField] private float audioMaxDistance = 40f;
+    [Range(0f, 5f)] [SerializeField] private float burstStartVolume = 3.5f;
+    [Range(0f, 5f)] [SerializeField] private float steamLoopVolume = 3.2f;
+    [SerializeField] private float audioMinDistance = 4f;
+    [SerializeField] private float audioMaxDistance = 55f;
 
     public State CurrentState { get; private set; } = State.Idle;
     public int RemainingUses { get; private set; }
@@ -159,49 +160,78 @@ public class SteamTrapController : MonoBehaviour
 
     private void ConfigureAudio()
     {
-        if (audioSource == null)
-            audioSource = GetComponent<AudioSource>();
+        if (burstAudioSource == null)
+        {
+            Transform burstTransform = transform.Find("SteamAudio");
+            if (burstTransform != null)
+                burstAudioSource = burstTransform.GetComponent<AudioSource>();
+        }
 
-        if (audioSource == null)
+        if (burstAudioSource == null)
+            burstAudioSource = GetComponent<AudioSource>();
+
+        if (loopAudioSource == null)
+        {
+            Transform loopTransform = transform.Find("SteamAudioLoop");
+            if (loopTransform != null)
+                loopAudioSource = loopTransform.GetComponent<AudioSource>();
+        }
+
+        ConfigureSpatialSource(burstAudioSource);
+        ConfigureSpatialSource(loopAudioSource);
+    }
+
+    private void ConfigureSpatialSource(AudioSource source)
+    {
+        if (source == null)
             return;
 
-        audioSource.playOnAwake = false;
-        audioSource.loop = false;
-        audioSource.spatialBlend = 1f;
-        audioSource.rolloffMode = AudioRolloffMode.Linear;
-        audioSource.minDistance = audioMinDistance;
-        audioSource.maxDistance = audioMaxDistance;
+        source.playOnAwake = false;
+        source.loop = false;
+        source.spatialBlend = 1f;
+        source.rolloffMode = AudioRolloffMode.Linear;
+        source.minDistance = audioMinDistance;
+        source.maxDistance = audioMaxDistance;
+        source.volume = 1f;
     }
 
     private void PlayBurstStart()
     {
-        if (audioSource == null || burstStartSound == null)
+        if (burstAudioSource == null || burstStartSound == null)
             return;
 
-        audioSource.PlayOneShot(burstStartSound, burstStartVolume);
+        burstAudioSource.pitch = 1f;
+        burstAudioSource.PlayOneShot(burstStartSound, burstStartVolume);
     }
 
     private void StartSteamLoop()
     {
-        if (audioSource == null || steamLoopSound == null)
+        AudioSource source = loopAudioSource != null ? loopAudioSource : burstAudioSource;
+        if (source == null || steamLoopSound == null)
             return;
 
-        audioSource.clip = steamLoopSound;
-        audioSource.loop = true;
-        audioSource.volume = steamLoopVolume;
-        audioSource.Play();
+        source.clip = steamLoopSound;
+        source.loop = true;
+        source.pitch = 1f;
+        source.volume = Mathf.Clamp01(steamLoopVolume);
+        // Allow perceived loudness above 1 via output mixer isn't available; boost with PlayOneShot if needed.
+        // Use volume > 1 when Unity allows (AudioSource.volume max is not hard-clamped to 1 in all versions).
+        source.volume = steamLoopVolume;
+        source.Play();
     }
 
     private void StopSteamLoop()
     {
-        if (audioSource == null)
+        AudioSource source = loopAudioSource != null ? loopAudioSource : burstAudioSource;
+        if (source == null)
             return;
 
-        if (audioSource.isPlaying && audioSource.loop)
-            audioSource.Stop();
+        if (source.isPlaying)
+            source.Stop();
 
-        audioSource.loop = false;
-        audioSource.clip = null;
+        source.loop = false;
+        source.clip = null;
+        source.volume = 1f;
     }
 
 #if UNITY_EDITOR

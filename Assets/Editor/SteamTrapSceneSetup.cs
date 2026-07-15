@@ -205,7 +205,7 @@ public static class SteamTrapSceneSetup
         soInt.FindProperty("valveHandle").objectReferenceValue = handlePivot;
         soInt.FindProperty("localSpinAxis").vector3Value = Vector3.up;
         soInt.FindProperty("openAngleDegrees").floatValue = 160f;
-        soInt.FindProperty("turnDuration").floatValue = 0.55f;
+        soInt.FindProperty("turnDuration").floatValue = 1.2f;
         soInt.FindProperty("turnSound").objectReferenceValue = turnClip;
         soInt.ApplyModifiedPropertiesWithoutUndo();
 

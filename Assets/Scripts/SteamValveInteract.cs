@@ -1,10 +1,10 @@
+using System.Collections;
 using TMPro;
 using UnityEngine;
 
 /// <summary>
 /// Player interaction for the emergency steam valve (E key).
-/// Rotates the valve handle, then activates SteamTrapController.
-/// Uses its own prompt UI so it does not fight TrapSwitch for SwitchPrompt.
+/// Finishes turning the handle first, then starts the steam burst.
 /// </summary>
 public class SteamValveInteract : MonoBehaviour
 {
@@ -28,21 +28,26 @@ public class SteamValveInteract : MonoBehaviour
     [Tooltip("Local axis through the wheel center (usually Y for this yellow handle).")]
     [SerializeField] private Vector3 localSpinAxis = Vector3.up;
     [SerializeField] private float openAngleDegrees = 160f;
-    [SerializeField] private float turnDuration = 0.55f;
+    [Tooltip("Seconds the valve takes to finish rotating. Steam only starts after this completes.")]
+    [Min(0.01f)]
+    [SerializeField] private float turnDuration = 1.2f;
     [SerializeField] private bool returnHandleAfterBurst = true;
 
     [Header("Audio")]
     [SerializeField] private AudioSource interactAudioSource;
     [SerializeField] private AudioClip turnSound;
+    [Tooltip("Optional short click when the valve finishes turning.")]
+    [SerializeField] private AudioClip turnEndSound;
+    [Range(0f, 5f)]
+    [SerializeField] private float turnVolume = 3f;
+    [Tooltip("Stretch/compress turnSound so it lasts exactly as long as Turn Duration.")]
+    [SerializeField] private bool syncTurnSoundToDuration = true;
 
     private Transform playerTransform;
-    private bool isTurning;
-    private bool applyActivationAfterTurn;
+    private bool isBusy;
     private bool returnHandlePending;
-    private float turnElapsed;
     private Quaternion closedLocalRotation;
-    private Quaternion turnStartRotation;
-    private Quaternion turnTargetRotation;
+    private Coroutine turnRoutine;
 
     private void Awake()
     {
@@ -61,6 +66,14 @@ public class SteamValveInteract : MonoBehaviour
         if (trapController != null)
             trapController.OnStateChanged -= HandleTrapStateChanged;
 
+        if (turnRoutine != null)
+        {
+            StopCoroutine(turnRoutine);
+            turnRoutine = null;
+        }
+
+        StopTurnSound();
+        isBusy = false;
         SetPromptVisible(false);
     }
 
@@ -91,8 +104,6 @@ public class SteamValveInteract : MonoBehaviour
 
     private void Update()
     {
-        UpdateTurnAnimation();
-
         if (playerTransform == null && !TryFindPlayer())
             return;
 
@@ -109,7 +120,7 @@ public class SteamValveInteract : MonoBehaviour
         UpdatePromptText();
         SetPromptVisible(true);
 
-        if (isTurning || !trapController.CanInteract)
+        if (isBusy || !trapController.CanInteract)
             return;
 
         if (Input.GetKeyDown(interactKey))
@@ -128,48 +139,52 @@ public class SteamValveInteract : MonoBehaviour
 
     private void BeginTurn()
     {
-        PlayTurnSound();
-        applyActivationAfterTurn = true;
+        if (isBusy || trapController == null || !trapController.CanInteract)
+            return;
+
         returnHandlePending = false;
 
-        if (valveHandle == null || turnDuration <= 0f)
+        if (turnRoutine != null)
+            StopCoroutine(turnRoutine);
+
+        turnRoutine = StartCoroutine(TurnThenSprayRoutine());
+    }
+
+    private IEnumerator TurnThenSprayRoutine()
+    {
+        isBusy = true;
+
+        Quaternion startRotation = valveHandle != null ? valveHandle.localRotation : Quaternion.identity;
+        Quaternion targetRotation = GetOpenLocalRotation();
+        float duration = Mathf.Max(0.01f, turnDuration);
+
+        StartSyncedTurnSound(duration);
+
+        // 1) Fully finish valve rotation first.
+        if (valveHandle != null)
         {
-            CompleteTurn();
-            return;
+            float elapsed = 0f;
+            while (elapsed < duration)
+            {
+                elapsed += Time.deltaTime;
+                float t = Mathf.SmoothStep(0f, 1f, elapsed / duration);
+                valveHandle.localRotation = Quaternion.Slerp(startRotation, targetRotation, t);
+                yield return null;
+            }
+
+            valveHandle.localRotation = targetRotation;
         }
 
-        turnStartRotation = valveHandle.localRotation;
-        turnTargetRotation = GetOpenLocalRotation();
-        turnElapsed = 0f;
-        isTurning = true;
-    }
+        StopTurnSound();
+        PlayTurnEndSound();
 
-    private void UpdateTurnAnimation()
-    {
-        if (!isTurning || valveHandle == null)
-            return;
+        // 2) Only after the valve has stopped turning, start steam.
+        if (trapController != null)
+            trapController.TryActivate();
 
-        turnElapsed += Time.deltaTime;
-        float t = Mathf.SmoothStep(0f, 1f, turnElapsed / Mathf.Max(0.01f, turnDuration));
-        valveHandle.localRotation = Quaternion.Slerp(turnStartRotation, turnTargetRotation, t);
-
-        if (turnElapsed >= turnDuration)
-            CompleteTurn();
-    }
-
-    private void CompleteTurn()
-    {
-        isTurning = false;
-
-        if (valveHandle != null)
-            valveHandle.localRotation = GetOpenLocalRotation();
-
-        if (!applyActivationAfterTurn || trapController == null)
-            return;
-
-        applyActivationAfterTurn = false;
-        trapController.TryActivate();
         returnHandlePending = returnHandleAfterBurst;
+        turnRoutine = null;
+        isBusy = false;
     }
 
     private void HandleTrapStateChanged(SteamTrapController.State state)
@@ -190,6 +205,12 @@ public class SteamValveInteract : MonoBehaviour
     {
         if (promptText == null || trapController == null)
             return;
+
+        if (isBusy && trapController.CurrentState == SteamTrapController.State.Idle)
+        {
+            promptText.text = "Turning valve...";
+            return;
+        }
 
         switch (trapController.CurrentState)
         {
@@ -222,23 +243,69 @@ public class SteamValveInteract : MonoBehaviour
 
     private void EnsureAudioSource()
     {
-        if (interactAudioSource != null)
-            return;
-
-        interactAudioSource = GetComponent<AudioSource>();
         if (interactAudioSource == null)
-            interactAudioSource = gameObject.AddComponent<AudioSource>();
+        {
+            interactAudioSource = GetComponent<AudioSource>();
+            if (interactAudioSource == null)
+                interactAudioSource = gameObject.AddComponent<AudioSource>();
+        }
 
         interactAudioSource.playOnAwake = false;
+        interactAudioSource.loop = false;
         interactAudioSource.spatialBlend = 0f;
+        interactAudioSource.volume = 1f;
+        interactAudioSource.pitch = 1f;
     }
 
-    private void PlayTurnSound()
+    private void StartSyncedTurnSound(float duration)
     {
+        EnsureAudioSource();
         if (interactAudioSource == null || turnSound == null)
             return;
 
-        interactAudioSource.PlayOneShot(turnSound);
+        interactAudioSource.Stop();
+        interactAudioSource.clip = turnSound;
+        interactAudioSource.loop = false;
+        interactAudioSource.volume = turnVolume;
+
+        if (syncTurnSoundToDuration && turnSound.length > 0.01f)
+        {
+            // pitch > 1 shortens the clip, pitch < 1 stretches it to match turnDuration.
+            float pitch = turnSound.length / duration;
+            interactAudioSource.pitch = Mathf.Clamp(pitch, 0.35f, 2.5f);
+        }
+        else
+        {
+            interactAudioSource.pitch = 1f;
+        }
+
+        interactAudioSource.Play();
+    }
+
+    private void StopTurnSound()
+    {
+        if (interactAudioSource == null)
+            return;
+
+        if (interactAudioSource.isPlaying)
+            interactAudioSource.Stop();
+
+        interactAudioSource.pitch = 1f;
+        interactAudioSource.clip = null;
+    }
+
+    private void PlayTurnEndSound()
+    {
+        EnsureAudioSource();
+        if (interactAudioSource == null)
+            return;
+
+        AudioClip endClip = turnEndSound != null ? turnEndSound : null;
+        if (endClip == null)
+            return;
+
+        interactAudioSource.pitch = 1f;
+        interactAudioSource.PlayOneShot(endClip, turnVolume);
     }
 
     private void OnDrawGizmosSelected()
@@ -246,4 +313,12 @@ public class SteamValveInteract : MonoBehaviour
         Gizmos.color = new Color(1f, 0.85f, 0.2f, 0.35f);
         Gizmos.DrawWireSphere(transform.position, interactDistance);
     }
+
+#if UNITY_EDITOR
+    private void OnValidate()
+    {
+        turnDuration = Mathf.Max(0.01f, turnDuration);
+        turnVolume = Mathf.Max(0f, turnVolume);
+    }
+#endif
 }
