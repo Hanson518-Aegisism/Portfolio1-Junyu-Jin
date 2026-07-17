@@ -53,12 +53,21 @@ public class SteamVisionObscurer : MonoBehaviour
 
     private void Update()
     {
-        bool shouldObscure = playersInside > 0
-            && trapController != null
-            && trapController.CurrentState == SteamTrapController.State.Bursting;
+        float target = 0f;
+        if (playersInside > 0 && trapController != null)
+        {
+            switch (trapController.CurrentState)
+            {
+                case SteamTrapController.State.Bursting:
+                    target = fogColor.a;
+                    break;
+                case SteamTrapController.State.WindingDown:
+                    target = fogColor.a * trapController.SteamIntensity;
+                    break;
+            }
+        }
 
-        float target = shouldObscure ? fogColor.a : 0f;
-        float speed = shouldObscure ? fadeInSpeed : fadeOutSpeed;
+        float speed = target > currentAlpha ? fadeInSpeed : fadeOutSpeed;
         currentAlpha = Mathf.MoveTowards(currentAlpha, target, speed * Time.deltaTime);
         ApplyOverlayAlpha(currentAlpha);
     }

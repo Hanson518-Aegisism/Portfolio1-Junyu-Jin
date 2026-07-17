@@ -21,6 +21,7 @@ public class SteamValveInteract : MonoBehaviour
     [SerializeField] private string idlePromptFormat = "Press E to open emergency valve ({0}/{1})";
     [SerializeField] private string coolingPrompt = "Valve cooling — cannot open";
     [SerializeField] private string burstingPrompt = "Valve locked — venting steam";
+    [SerializeField] private string windingDownPrompt = "Steam venting down...";
     [SerializeField] private string exhaustedPrompt = "Pressure exhausted";
 
     [Header("Valve Animation")]
@@ -222,6 +223,9 @@ public class SteamValveInteract : MonoBehaviour
                 break;
             case SteamTrapController.State.Bursting:
                 promptText.text = burstingPrompt;
+                break;
+            case SteamTrapController.State.WindingDown:
+                promptText.text = windingDownPrompt;
                 break;
             case SteamTrapController.State.Cooling:
                 promptText.text = coolingPrompt;

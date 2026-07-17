@@ -12,6 +12,7 @@ public class SteamTrapController : MonoBehaviour
     {
         Idle,
         Bursting,
+        WindingDown,
         Cooling,
         Exhausted
     }
@@ -21,6 +22,8 @@ public class SteamTrapController : MonoBehaviour
 
     [Header("Timing")]
     [SerializeField] private float burstDuration = 15f;
+    [Tooltip("Seconds for steam to slow down and fade out after a burst ends.")]
+    [SerializeField] private float shutdownDuration = 3.5f;
     [Tooltip("Seconds after a burst before the valve can be used again.")]
     [SerializeField] private float cooldownDuration = 10f;
 
@@ -48,18 +51,23 @@ public class SteamTrapController : MonoBehaviour
     public int RemainingUses { get; private set; }
     public int MaxUses => maxUses;
     public bool CanInteract => CurrentState == State.Idle && RemainingUses > 0;
+    /// <summary>1 while bursting, fades to 0 during wind-down.</summary>
+    public float SteamIntensity { get; private set; }
 
     public event Action<State> OnStateChanged;
     public event Action<int> OnUsesChanged;
 
     private Coroutine cycleRoutine;
+    private ParticleSystem[] cachedParticleSystems;
+    private float[] cachedEmissionRates;
+    private float[] cachedSimulationSpeeds;
 
     private void Awake()
     {
         RemainingUses = Mathf.Max(0, maxUses);
         ConfigureAudio();
+        CacheParticleSystems();
         SetSteamEffectsActive(false);
-        // Keep the vision zone collider enabled so enter/exit tracking stays valid.
         if (steamVisionZone != null)
             steamVisionZone.enabled = true;
         if (visionObscurer != null)
@@ -90,6 +98,7 @@ public class SteamTrapController : MonoBehaviour
 
     private IEnumerator BurstCycleRoutine()
     {
+        SteamIntensity = 1f;
         SetState(State.Bursting);
         SetSteamEffectsActive(true);
         PlayBurstStart();
@@ -97,10 +106,7 @@ public class SteamTrapController : MonoBehaviour
 
         yield return new WaitForSeconds(Mathf.Max(0.01f, burstDuration));
 
-        StopSteamLoop();
-        SetSteamEffectsActive(false);
-        if (visionObscurer != null)
-            visionObscurer.ForceClear();
+        yield return WindDownSteamRoutine();
 
         if (RemainingUses <= 0)
         {
@@ -116,10 +122,163 @@ public class SteamTrapController : MonoBehaviour
         cycleRoutine = null;
     }
 
+    private IEnumerator WindDownSteamRoutine()
+    {
+        SetState(State.WindingDown);
+
+        float duration = Mathf.Max(0.5f, shutdownDuration);
+        // First portion: stop feeding new steam. Rest of time: let existing particles fade out.
+        float stopEmitPortion = 0.35f;
+        float stopEmitTime = duration * stopEmitPortion;
+        AudioSource loopSource = loopAudioSource != null ? loopAudioSource : burstAudioSource;
+        float loopPeakVolume = steamLoopVolume;
+
+        float elapsed = 0f;
+        bool stoppedEmitting = false;
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / duration);
+            // Smooth ease so vision/audio don't cliff at the end.
+            float intensity = Mathf.Pow(1f - t, 1.6f);
+            SteamIntensity = intensity;
+            FadeSteamLoopVolume(loopSource, loopPeakVolume, intensity);
+
+            if (!stoppedEmitting)
+            {
+                float emitT = Mathf.Clamp01(elapsed / stopEmitTime);
+                float emitIntensity = 1f - Mathf.SmoothStep(0f, 1f, emitT);
+                ApplyEmissionIntensity(emitIntensity);
+
+                if (emitT >= 1f)
+                {
+                    StopSteamEmitting();
+                    stoppedEmitting = true;
+                }
+            }
+
+            yield return null;
+        }
+
+        SteamIntensity = 0f;
+        StopSteamLoop();
+        // Particles should already be mostly gone; disable without Clear so nothing "pops".
+        DisableSteamEffectsSoft();
+        if (visionObscurer != null)
+            visionObscurer.ForceClear();
+    }
+
+    private void ApplyEmissionIntensity(float intensity)
+    {
+        if (cachedParticleSystems == null)
+            return;
+
+        for (int i = 0; i < cachedParticleSystems.Length; i++)
+        {
+            ParticleSystem ps = cachedParticleSystems[i];
+            if (ps == null)
+                continue;
+
+            var emission = ps.emission;
+            emission.rateOverTime = cachedEmissionRates[i] * intensity;
+        }
+    }
+
+    private void StopSteamEmitting()
+    {
+        if (cachedParticleSystems == null)
+            return;
+
+        for (int i = 0; i < cachedParticleSystems.Length; i++)
+        {
+            ParticleSystem ps = cachedParticleSystems[i];
+            if (ps == null)
+                continue;
+
+            // Keep alive particles; only stop spawning new ones.
+            ps.Stop(true, ParticleSystemStopBehavior.StopEmitting);
+
+            var emission = ps.emission;
+            emission.rateOverTime = cachedEmissionRates[i];
+        }
+    }
+
+    private void DisableSteamEffectsSoft()
+    {
+        if (steamEffectObjects == null)
+            return;
+
+        for (int i = 0; i < steamEffectObjects.Length; i++)
+        {
+            GameObject effect = steamEffectObjects[i];
+            if (effect == null)
+                continue;
+
+            ParticleSystem[] systems = effect.GetComponentsInChildren<ParticleSystem>(true);
+            for (int s = 0; s < systems.Length; s++)
+            {
+                systems[s].Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+                var main = systems[s].main;
+                main.simulationSpeed = 1f;
+            }
+
+            effect.SetActive(false);
+        }
+    }
+
+    private void FadeSteamLoopVolume(AudioSource source, float peakVolume, float intensity)
+    {
+        if (source == null || !source.isPlaying)
+            return;
+
+        source.volume = peakVolume * intensity;
+    }
+
     private void SetState(State next)
     {
         CurrentState = next;
         OnStateChanged?.Invoke(CurrentState);
+    }
+
+    private void CacheParticleSystems()
+    {
+        if (steamEffectObjects == null || steamEffectObjects.Length == 0)
+        {
+            cachedParticleSystems = Array.Empty<ParticleSystem>();
+            cachedEmissionRates = Array.Empty<float>();
+            cachedSimulationSpeeds = Array.Empty<float>();
+            return;
+        }
+
+        int count = 0;
+        for (int i = 0; i < steamEffectObjects.Length; i++)
+        {
+            if (steamEffectObjects[i] == null)
+                continue;
+            count += steamEffectObjects[i].GetComponentsInChildren<ParticleSystem>(true).Length;
+        }
+
+        cachedParticleSystems = new ParticleSystem[count];
+        cachedEmissionRates = new float[count];
+        cachedSimulationSpeeds = new float[count];
+
+        int index = 0;
+        for (int i = 0; i < steamEffectObjects.Length; i++)
+        {
+            GameObject effect = steamEffectObjects[i];
+            if (effect == null)
+                continue;
+
+            ParticleSystem[] systems = effect.GetComponentsInChildren<ParticleSystem>(true);
+            for (int s = 0; s < systems.Length; s++)
+            {
+                cachedParticleSystems[index] = systems[s];
+                cachedEmissionRates[index] = systems[s].emission.rateOverTime.constant;
+                cachedSimulationSpeeds[index] = systems[s].main.simulationSpeed;
+                index++;
+            }
+        }
     }
 
     private void SetSteamEffectsActive(bool active)
@@ -140,10 +299,16 @@ public class SteamTrapController : MonoBehaviour
             ParticleSystem[] systems = effect.GetComponentsInChildren<ParticleSystem>(true);
             for (int s = 0; s < systems.Length; s++)
             {
+                var main = systems[s].main;
+                main.simulationSpeed = 1f;
+
                 systems[s].Clear(true);
                 systems[s].Play(true);
             }
         }
+
+        if (active)
+            CacheParticleSystems();
     }
 
     private void RefreshChargeLights()
@@ -213,9 +378,6 @@ public class SteamTrapController : MonoBehaviour
         source.clip = steamLoopSound;
         source.loop = true;
         source.pitch = 1f;
-        source.volume = Mathf.Clamp01(steamLoopVolume);
-        // Allow perceived loudness above 1 via output mixer isn't available; boost with PlayOneShot if needed.
-        // Use volume > 1 when Unity allows (AudioSource.volume max is not hard-clamped to 1 in all versions).
         source.volume = steamLoopVolume;
         source.Play();
     }
@@ -239,6 +401,7 @@ public class SteamTrapController : MonoBehaviour
     {
         maxUses = Mathf.Max(0, maxUses);
         burstDuration = Mathf.Max(0.01f, burstDuration);
+        shutdownDuration = Mathf.Max(0.01f, shutdownDuration);
         cooldownDuration = Mathf.Max(0f, cooldownDuration);
         ConfigureAudio();
     }
