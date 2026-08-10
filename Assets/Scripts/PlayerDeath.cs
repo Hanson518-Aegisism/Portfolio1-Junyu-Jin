@@ -6,6 +6,7 @@ using UnityEngine.UI;
 public class PlayerDeath : MonoBehaviour
 {
     [Header("Respawn")]
+    [Tooltip("Fallback respawn when the kill source has no trap-specific respawn point.")]
     public Transform respawnPoint;
     public float respawnDelay = 3f;
 
@@ -25,6 +26,7 @@ public class PlayerDeath : MonoBehaviour
 
     private CharacterController characterController;
     private bool isDead = false;
+    private Transform pendingRespawnPoint;
 
     private void Awake()
     {
@@ -50,8 +52,18 @@ public class PlayerDeath : MonoBehaviour
 
         if (other.CompareTag("KillZone"))
         {
+            pendingRespawnPoint = ResolveRespawnPoint(other);
             StartCoroutine(DeathRoutine());
         }
+    }
+
+    private Transform ResolveRespawnPoint(Collider killZone)
+    {
+        KillTrapController trap = killZone.GetComponentInParent<KillTrapController>();
+        if (trap != null && trap.RespawnPoint != null)
+            return trap.RespawnPoint;
+
+        return respawnPoint;
     }
 
     IEnumerator DeathRoutine()
@@ -77,14 +89,22 @@ public class PlayerDeath : MonoBehaviour
 
         yield return new WaitForSeconds(respawnDelay);
 
-        characterController.enabled = false;
+        Transform spawn = pendingRespawnPoint != null ? pendingRespawnPoint : respawnPoint;
+        if (spawn != null)
+        {
+            characterController.enabled = false;
 
-        transform.SetPositionAndRotation(
-            respawnPoint.position,
-            respawnPoint.rotation
-        );
+            transform.SetPositionAndRotation(
+                spawn.position,
+                spawn.rotation
+            );
 
-        characterController.enabled = true;
+            characterController.enabled = true;
+        }
+        else
+        {
+            Debug.LogWarning("PlayerDeath: No respawn point assigned on the trap or PlayerDeath.", this);
+        }
 
         if (deathText != null)
         {
@@ -98,6 +118,7 @@ public class PlayerDeath : MonoBehaviour
             firstPersonController.enabled = true;
         }
 
+        pendingRespawnPoint = null;
         isDead = false;
     }
 

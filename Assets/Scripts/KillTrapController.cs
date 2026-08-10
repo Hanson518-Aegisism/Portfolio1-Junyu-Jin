@@ -19,10 +19,15 @@ public class KillTrapController : MonoBehaviour
     [Tooltip("3D audio source at the electric trap location. Auto-finds child 'ElectricTrapAudio' if empty.")]
     [SerializeField] private AudioSource electricAudioSource;
 
+    [Header("Respawn")]
+    [Tooltip("Where the player respawns after being killed by this trap. Leave empty to use PlayerDeath's default respawn point.")]
+    [SerializeField] private Transform respawnPoint;
+
     [Header("State")]
     [SerializeField] private bool startActive = true;
 
     public bool IsActive { get; private set; }
+    public Transform RespawnPoint => respawnPoint;
     public event Action<bool> OnActiveChanged;
 
     private void Awake()
@@ -138,6 +143,16 @@ public class KillTrapController : MonoBehaviour
 
         ResolveElectricAudioSource();
         ConfigureElectricAudioSource();
+    }
+
+    private void OnDrawGizmosSelected()
+    {
+        if (respawnPoint == null)
+            return;
+
+        Gizmos.color = Color.cyan;
+        Gizmos.DrawWireSphere(respawnPoint.position, 0.35f);
+        Gizmos.DrawLine(transform.position, respawnPoint.position);
     }
 #endif
 }
