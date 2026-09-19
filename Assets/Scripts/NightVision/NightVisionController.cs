@@ -33,6 +33,14 @@ public class NightVisionController : MonoBehaviour
 
     [SerializeField] float charge = 1f;
 
+    [Header("Audio")]
+    [Tooltip("留空就用内置的夜视仪开机声。")]
+    [SerializeField] AudioClip powerOnSound;
+    [Tooltip("留空就用内置的夜视仪关机声。")]
+    [SerializeField] AudioClip powerOffSound;
+    [Range(0f, 1f)]
+    [SerializeField] float soundVolume = 0.9f;
+
     Phase phase = Phase.Off;
     float phaseTime;
     bool visionEnabled;
@@ -45,6 +53,7 @@ public class NightVisionController : MonoBehaviour
     Color ambientGroundBaseline = Color.gray;
     Camera viewCamera;
     StarterAssetsInputs inputs;
+    AudioSource nightVisionAudio;
 
     public float Charge => charge;
     public bool IsOn => phase == Phase.On;
@@ -79,6 +88,7 @@ public class NightVisionController : MonoBehaviour
             volume.weight = 0f;
 
         NightVisionHighlightFeature.Enabled = false;
+        EnsureAudio();
     }
 
     void Start()
@@ -122,11 +132,13 @@ public class NightVisionController : MonoBehaviour
 
             phase = Phase.Donning;
             phaseTime = 0f;
+            PlayNightVisionSound(true);
         }
         else if (phase == Phase.On)
         {
             phase = Phase.Doffing;
             phaseTime = 0f;
+            PlayNightVisionSound(false);
         }
     }
 
@@ -153,6 +165,7 @@ public class NightVisionController : MonoBehaviour
             {
                 phase = Phase.Doffing;
                 phaseTime = 0f;
+                PlayNightVisionSound(false);
             }
 
             return;
@@ -277,6 +290,7 @@ public class NightVisionController : MonoBehaviour
 
     void ForceOff()
     {
+        bool wasActive = phase != Phase.Off || visionEnabled;
         phase = Phase.Off;
         phaseTime = 0f;
         SetVision(false);
@@ -285,5 +299,43 @@ public class NightVisionController : MonoBehaviour
         if (viewCamera != null)
             viewCamera.fieldOfView = baseFov;
         ApplyVisual(0f, 1f);
+        if (wasActive)
+            PlayNightVisionSound(false);
+    }
+
+    void EnsureAudio()
+    {
+        if (powerOnSound == null)
+            powerOnSound = NightVisionSounds.CreatePowerOn();
+        if (powerOffSound == null)
+            powerOffSound = NightVisionSounds.CreatePowerOff();
+
+        Transform existing = transform.Find("NightVisionAudio");
+        if (existing != null)
+            nightVisionAudio = existing.GetComponent<AudioSource>();
+
+        if (nightVisionAudio == null)
+        {
+            GameObject audioObject = new GameObject("NightVisionAudio");
+            audioObject.transform.SetParent(transform, false);
+            nightVisionAudio = audioObject.AddComponent<AudioSource>();
+        }
+
+        nightVisionAudio.playOnAwake = false;
+        nightVisionAudio.spatialBlend = 0f;
+        nightVisionAudio.loop = false;
+    }
+
+    void PlayNightVisionSound(bool poweringOn)
+    {
+        if (nightVisionAudio == null)
+            return;
+
+        AudioClip clip = poweringOn ? powerOnSound : powerOffSound;
+        if (clip == null)
+            return;
+
+        nightVisionAudio.Stop();
+        nightVisionAudio.PlayOneShot(clip, soundVolume);
     }
 }
