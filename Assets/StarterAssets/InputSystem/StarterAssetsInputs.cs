@@ -12,6 +12,7 @@ namespace StarterAssets
 		public Vector2 look;
 		public bool jump;
 		public bool sprint;
+		public bool nightVision;
 
 		[Header("Movement Settings")]
 		public bool analogMovement;
@@ -42,6 +43,12 @@ namespace StarterAssets
 		public void OnSprint(InputValue value)
 		{
 			SprintInput(value.isPressed);
+		}
+
+		public void OnNightVision(InputValue value)
+		{
+			if (value.isPressed)
+				nightVision = true;
 		}
 #endif
 

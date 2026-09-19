@@ -26,6 +26,8 @@ public class PlayerDeath : MonoBehaviour
 
     private CharacterController characterController;
     private bool isDead = false;
+
+    public bool IsDead => isDead;
     private Transform pendingRespawnPoint;
 
     private void Awake()
