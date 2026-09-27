@@ -1,0 +1,470 @@
+{
+  "game": "遗迹对峙",
+  "version": "tts-assets-1.0",
+  "card_size_px": [
+    512,
+    768
+  ],
+  "field": "5x6",
+  "items": [
+    {
+      "id": 1,
+      "name": "金字塔"
+    },
+    {
+      "id": 2,
+      "name": "狮身人面"
+    },
+    {
+      "id": 3,
+      "name": "房子"
+    },
+    {
+      "id": 4,
+      "name": "大象"
+    },
+    {
+      "id": 5,
+      "name": "河马"
+    },
+    {
+      "id": 6,
+      "name": "马"
+    },
+    {
+      "id": 7,
+      "name": "猫"
+    },
+    {
+      "id": 8,
+      "name": "鳄鱼"
+    },
+    {
+      "id": 9,
+      "name": "蛇"
+    },
+    {
+      "id": 10,
+      "name": "猫头鹰"
+    },
+    {
+      "id": 11,
+      "name": "鹰"
+    },
+    {
+      "id": 12,
+      "name": "鱼"
+    },
+    {
+      "id": 13,
+      "name": "鸟"
+    },
+    {
+      "id": 14,
+      "name": "树"
+    },
+    {
+      "id": 15,
+      "name": "棕榈"
+    },
+    {
+      "id": 16,
+      "name": "船"
+    },
+    {
+      "id": 17,
+      "name": "车轮"
+    },
+    {
+      "id": 18,
+      "name": "锤子"
+    },
+    {
+      "id": 19,
+      "name": "针"
+    },
+    {
+      "id": 20,
+      "name": "矛"
+    },
+    {
+      "id": 21,
+      "name": "弓"
+    },
+    {
+      "id": 22,
+      "name": "斧头"
+    },
+    {
+      "id": 23,
+      "name": "火把"
+    },
+    {
+      "id": 24,
+      "name": "面包"
+    },
+    {
+      "id": 25,
+      "name": "水壶"
+    },
+    {
+      "id": 26,
+      "name": "金币"
+    },
+    {
+      "id": 27,
+      "name": "王冠"
+    },
+    {
+      "id": 28,
+      "name": "镜子"
+    },
+    {
+      "id": 29,
+      "name": "盾"
+    },
+    {
+      "id": 30,
+      "name": "铲子"
+    }
+  ],
+  "words": [
+    "活的",
+    "鸟",
+    "虫",
+    "鱼",
+    "兽",
+    "植物",
+    "水",
+    "火",
+    "土",
+    "大",
+    "小",
+    "锋利",
+    "危险",
+    "工具",
+    "贵重",
+    "金属"
+  ],
+  "combos": [
+    {
+      "name": "巨兽行进",
+      "need": "大象 ＋ 河马 ＋ 马",
+      "bonus": "+4"
+    },
+    {
+      "name": "兵器架",
+      "need": "矛 ＋ 盾 ＋ 弓",
+      "bonus": "+3"
+    },
+    {
+      "name": "工匠袋",
+      "need": "锤子 ＋ 针 ＋ 铲子",
+      "bonus": "+3"
+    },
+    {
+      "name": "王权三宝",
+      "need": "王冠 ＋ 金币 ＋ 金字塔",
+      "bonus": "+5"
+    },
+    {
+      "name": "河上船家",
+      "need": "船 ＋ 鱼 ＋ 水壶",
+      "bonus": "+3"
+    },
+    {
+      "name": "家与火",
+      "need": "房子 ＋ 火把 ＋ 面包",
+      "bonus": "+3"
+    },
+    {
+      "name": "飞与爬",
+      "need": "鹰 ＋ 蛇 ＋ 鳄鱼",
+      "bonus": "+3"
+    },
+    {
+      "name": "守护兽",
+      "need": "猫 ＋ 猫头鹰",
+      "bonus": "+2"
+    },
+    {
+      "name": "巨石文明",
+      "need": "金字塔 ＋ 狮身人面",
+      "bonus": "+2"
+    },
+    {
+      "name": "伐木人",
+      "need": "斧头 ＋ 树",
+      "bonus": "+2"
+    }
+  ],
+  "grid_scores": [
+    [
+      "+2",
+      "+1",
+      "+3",
+      "+1",
+      "+2",
+      "+1"
+    ],
+    [
+      "+1",
+      "−1",
+      "+2",
+      "−1",
+      "+1",
+      "+2"
+    ],
+    [
+      "+3",
+      "+2",
+      "0",
+      "+2",
+      "+3",
+      "−1"
+    ],
+    [
+      "+1",
+      "−1",
+      "+2",
+      "−1",
+      "+1",
+      "+2"
+    ],
+    [
+      "+2",
+      "+1",
+      "+3",
+      "+1",
+      "+2",
+      "+1"
+    ]
+  ],
+  "files": {
+    "cards": [
+      {
+        "file": "back.png",
+        "role": "deck_back"
+      },
+      {
+        "file": "01-金字塔.png",
+        "role": "item_face",
+        "id": 1,
+        "name": "金字塔"
+      },
+      {
+        "file": "02-狮身人面.png",
+        "role": "item_face",
+        "id": 2,
+        "name": "狮身人面"
+      },
+      {
+        "file": "03-房子.png",
+        "role": "item_face",
+        "id": 3,
+        "name": "房子"
+      },
+      {
+        "file": "04-大象.png",
+        "role": "item_face",
+        "id": 4,
+        "name": "大象"
+      },
+      {
+        "file": "05-河马.png",
+        "role": "item_face",
+        "id": 5,
+        "name": "河马"
+      },
+      {
+        "file": "06-马.png",
+        "role": "item_face",
+        "id": 6,
+        "name": "马"
+      },
+      {
+        "file": "07-猫.png",
+        "role": "item_face",
+        "id": 7,
+        "name": "猫"
+      },
+      {
+        "file": "08-鳄鱼.png",
+        "role": "item_face",
+        "id": 8,
+        "name": "鳄鱼"
+      },
+      {
+        "file": "09-蛇.png",
+        "role": "item_face",
+        "id": 9,
+        "name": "蛇"
+      },
+      {
+        "file": "10-猫头鹰.png",
+        "role": "item_face",
+        "id": 10,
+        "name": "猫头鹰"
+      },
+      {
+        "file": "11-鹰.png",
+        "role": "item_face",
+        "id": 11,
+        "name": "鹰"
+      },
+      {
+        "file": "12-鱼.png",
+        "role": "item_face",
+        "id": 12,
+        "name": "鱼"
+      },
+      {
+        "file": "13-鸟.png",
+        "role": "item_face",
+        "id": 13,
+        "name": "鸟"
+      },
+      {
+        "file": "14-树.png",
+        "role": "item_face",
+        "id": 14,
+        "name": "树"
+      },
+      {
+        "file": "15-棕榈.png",
+        "role": "item_face",
+        "id": 15,
+        "name": "棕榈"
+      },
+      {
+        "file": "16-船.png",
+        "role": "item_face",
+        "id": 16,
+        "name": "船"
+      },
+      {
+        "file": "17-车轮.png",
+        "role": "item_face",
+        "id": 17,
+        "name": "车轮"
+      },
+      {
+        "file": "18-锤子.png",
+        "role": "item_face",
+        "id": 18,
+        "name": "锤子"
+      },
+      {
+        "file": "19-针.png",
+        "role": "item_face",
+        "id": 19,
+        "name": "针"
+      },
+      {
+        "file": "20-矛.png",
+        "role": "item_face",
+        "id": 20,
+        "name": "矛"
+      },
+      {
+        "file": "21-弓.png",
+        "role": "item_face",
+        "id": 21,
+        "name": "弓"
+      },
+      {
+        "file": "22-斧头.png",
+        "role": "item_face",
+        "id": 22,
+        "name": "斧头"
+      },
+      {
+        "file": "23-火把.png",
+        "role": "item_face",
+        "id": 23,
+        "name": "火把"
+      },
+      {
+        "file": "24-面包.png",
+        "role": "item_face",
+        "id": 24,
+        "name": "面包"
+      },
+      {
+        "file": "25-水壶.png",
+        "role": "item_face",
+        "id": 25,
+        "name": "水壶"
+      },
+      {
+        "file": "26-金币.png",
+        "role": "item_face",
+        "id": 26,
+        "name": "金币"
+      },
+      {
+        "file": "27-王冠.png",
+        "role": "item_face",
+        "id": 27,
+        "name": "王冠"
+      },
+      {
+        "file": "28-镜子.png",
+        "role": "item_face",
+        "id": 28,
+        "name": "镜子"
+      },
+      {
+        "file": "29-盾.png",
+        "role": "item_face",
+        "id": 29,
+        "name": "盾"
+      },
+      {
+        "file": "30-铲子.png",
+        "role": "item_face",
+        "id": 30,
+        "name": "铲子"
+      }
+    ],
+    "boards": [
+      {
+        "file": "格分图-5x6.png",
+        "role": "score_grid",
+        "note": "全桌可见"
+      },
+      {
+        "file": "进贡卡-5x6.png",
+        "role": "offer_board",
+        "note": "每人一张，私下标记后同时亮"
+      },
+      {
+        "file": "笔记板-16词.png",
+        "role": "native_notes",
+        "note": "原住民手牌区私藏"
+      },
+      {
+        "file": "语言板-殖民者.png",
+        "role": "colonist_language",
+        "note": "殖民者手牌区私藏；符号为示范配对，可每局重洗"
+      },
+      {
+        "file": "组合加分表.png",
+        "role": "combo_table"
+      },
+      {
+        "file": "计分表.png",
+        "role": "score_sheet"
+      },
+      {
+        "file": "画符板-空白.png",
+        "role": "draw_pad"
+      }
+    ]
+  },
+  "tts_tips": {
+    "deck": "Custom Deck：Face 用单张导入或逐张 Custom Card；Back 用 cards/back.png",
+    "private": "语言板/笔记板建议放进各自手牌区，仅自己可见",
+    "tokens": "用 TTS 自带 Colored Chip 两色作殖民者收物标记"
+  }
+}
