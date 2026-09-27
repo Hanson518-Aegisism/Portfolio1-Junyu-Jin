@@ -6,13 +6,19 @@
 规则全文见：`Docs/殖民原住民说明书-v3.1.docx`  
 文件清单见：本目录 `manifest.json`
 
+**一键找图**：所有 PNG 已集中在本目录  
+`全部图片-导入用/`（共 38 张）  
+也可直接解压同目录的 `全部图片-导入用.zip`。
+
+命名：`00-牌背.png` · `贡品-01-….png` · `版图-….png`
+
 ---
 
 ## 0. 开始前
 
 1. Steam 已安装并启动过一次 **Tabletop Simulator**。  
-2. 本文件夹路径记住（Windows 示例）：  
-   `...\Portfolio1 Junyu Jin\Docs\TTS-遗迹对峙\`  
+2. 导入时选图请打开：  
+   `...\Docs\TTS-遗迹对峙\全部图片-导入用\`  
 3. TTS 读本地图有时不稳，**推荐**用游戏内 **Cloud** 上传图片（见第 2 步）。也可把 PNG 丢到可直链图床后再贴 URL。
 
 ---
@@ -35,8 +41,8 @@
 
 1. 菜单 **Objects → Components → Cards → Custom Card**。  
 2. Face：点文件夹图标，选  
-   `cards/01-金字塔.png`  
-3. Back：选 `cards/back.png`。  
+   `全部图片-导入用/贡品-01-金字塔.png`  
+3. Back：选 `全部图片-导入用/00-牌背.png`。  
 4. 点 **Import**。桌上出现一张牌。  
 5. 对 `02` … `30` 重复；或复制第一张后改 Face URL/路径。  
 6. 把 30 张叠在一起：多选（Shift）→ 右键 → **Group**（或拖到一叠上）形成牌库。
@@ -66,19 +72,19 @@ TTS 的 Custom Deck 通常要「多张面拼成一张大图」。第一版素材
 对每个 PNG 做一次：
 
 1. **Objects → Components → Custom → Tile**（或 **Board**）。  
-2. Image：选对应文件。  
+2. Image：在 `全部图片-导入用/` 里选对应 `版图-….png`。  
 3. Type 可选 **Rectangle**；Thickness 稍薄。  
 4. Import 后拖到合适位置、缩放（按住鼠标缩放键或右键尺寸）。
 
 | 文件 | 放哪 | 谁看得见 |
 |---|---|---|
-| `boards/格分图-5x6.png` | 场地旁 | 全桌 |
-| `boards/组合加分表.png` | 场地旁 | 全桌 |
-| `boards/计分表.png` | 桌边 | 全桌 |
-| `boards/画符板-空白.png` | 殖民者面前 | 全桌（当众画符） |
-| `boards/进贡卡-5x6.png` | 每位原住民面前各 1 份 | 标记时私密，亮牌时公开 |
-| `boards/笔记板-16词.png` | 每位原住民 | **建议放进手牌区** |
-| `boards/语言板-殖民者.png` | 殖民者 | **建议放进手牌区** |
+| `版图-格分图-5x6.png` | 场地旁 | 全桌 |
+| `版图-组合加分表.png` | 场地旁 | 全桌 |
+| `版图-计分表.png` | 桌边 | 全桌 |
+| `版图-画符板-空白.png` | 殖民者面前 | 全桌（当众画符） |
+| `版图-进贡卡-5x6.png` | 每位原住民面前各 1 份 | 标记时私密，亮牌时公开 |
+| `版图-笔记板-16词.png` | 每位原住民 | **建议放进手牌区** |
+| `版图-语言板-殖民者.png` | 殖民者 | **建议放进手牌区** |
 
 复制物件：选中 → **Ctrl+C / Ctrl+V**（或右键 Clone）。原住民有几人就复制几份进贡卡、笔记板。
 
@@ -135,26 +141,19 @@ TTS 没有完美纸质屏风，第一版用：
 
 ```
 TTS-遗迹对峙/
-  README-导入步骤.md      ← 本文件
-  manifest.json           ← 清单与牌名对照
-  _generate_assets.py     ← 需要时可重新生成 PNG
-  cards/
-    back.png
-    01-金字塔.png … 30-铲子.png
-  boards/
-    格分图-5x6.png
-    进贡卡-5x6.png
-    笔记板-16词.png
-    语言板-殖民者.png
-    组合加分表.png
-    计分表.png
-    画符板-空白.png
+  全部图片-导入用/        ← 导入只看这个文件夹（或解压 zip）
+  全部图片-导入用.zip
+  README-导入步骤.md
+  manifest.json
+  _generate_assets.py
+  cards/ · boards/        ← 源文件分类备份（可忽略）
 ```
 
-重新生成素材（改字/改分之后）：
+重新生成素材后若要刷新汇总文件夹：
 
 ```bash
 python3 Docs/TTS-遗迹对峙/_generate_assets.py
+# 再把 cards/ 与 boards/ 按命名规则复制进 全部图片-导入用/
 ```
 
 ---

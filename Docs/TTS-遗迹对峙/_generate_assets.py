@@ -360,9 +360,39 @@ def main() -> None:
         json.dumps(manifest, ensure_ascii=False, indent=2),
         encoding="utf-8",
     )
+
+    # Flat folder for easy TTS import
+    import shutil
+
+    flat = ROOT / "全部图片-导入用"
+    if flat.exists():
+        shutil.rmtree(flat)
+    flat.mkdir(parents=True)
+    shutil.copy2(CARDS / "back.png", flat / "00-牌背.png")
+    for n, name in ITEMS:
+        src = CARDS / f"{n:02d}-{name}.png"
+        shutil.copy2(src, flat / f"贡品-{n:02d}-{name}.png")
+    board_map = {
+        "格分图-5x6.png": "版图-格分图-5x6.png",
+        "进贡卡-5x6.png": "版图-进贡卡-5x6.png",
+        "笔记板-16词.png": "版图-笔记板-16词.png",
+        "语言板-殖民者.png": "版图-语言板-殖民者.png",
+        "组合加分表.png": "版图-组合加分表.png",
+        "计分表.png": "版图-计分表.png",
+        "画符板-空白.png": "版图-画符板-空白.png",
+    }
+    for src_name, dst_name in board_map.items():
+        shutil.copy2(BOARDS / src_name, flat / dst_name)
+
+    zip_path = ROOT / "全部图片-导入用.zip"
+    if zip_path.exists():
+        zip_path.unlink()
+    shutil.make_archive(str(ROOT / "全部图片-导入用"), "zip", ROOT, "全部图片-导入用")
+
     print("OK", ROOT)
     print("cards", len(list(CARDS.glob("*.png"))))
     print("boards", len(list(BOARDS.glob("*.png"))))
+    print("flat", len(list(flat.glob("*.png"))))
 
 
 if __name__ == "__main__":
