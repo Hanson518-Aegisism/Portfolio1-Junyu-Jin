@@ -59,6 +59,17 @@ public class PlayerDeath : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Kill the player from a non-trigger source (e.g. enemy catch).
+    /// </summary>
+    public void Kill(Transform overrideRespawnPoint = null)
+    {
+        if (isDead) return;
+
+        pendingRespawnPoint = overrideRespawnPoint != null ? overrideRespawnPoint : respawnPoint;
+        StartCoroutine(DeathRoutine());
+    }
+
     private Transform ResolveRespawnPoint(Collider killZone)
     {
         KillTrapController trap = killZone.GetComponentInParent<KillTrapController>();
