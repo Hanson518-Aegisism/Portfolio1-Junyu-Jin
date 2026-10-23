@@ -21,6 +21,13 @@ public class EnemyChasePlayer : MonoBehaviour
     [Header("Catch")]
     [SerializeField] float catchDistance = 1.6f;
 
+    [Header("Chase Scream / 追击尖叫")]
+    [Tooltip("进入追击时播放。将尖叫音频拖到这里；留空则静音。")]
+    [SerializeField] AudioClip chaseScream;
+    [SerializeField] AudioSource chaseScreamSource;
+    [Range(0f, 1f)] [SerializeField] float chaseScreamVolume = 1f;
+    [Min(0f)] [SerializeField] float chaseScreamCooldown = 8f;
+
     [Header("Lost Sight")]
     [SerializeField] float arriveThreshold = 1.25f;
     [SerializeField] float giveUpDelay = 3f;
@@ -45,10 +52,20 @@ public class EnemyChasePlayer : MonoBehaviour
     float giveUpAt;
     float investigatePauseUntil;
     float targetSpeed;
+    float nextScreamTime = float.NegativeInfinity;
 
     void Awake()
     {
         agent = GetComponent<NavMeshAgent>();
+        if (chaseScreamSource == null)
+        {
+            chaseScreamSource = gameObject.AddComponent<AudioSource>();
+            chaseScreamSource.playOnAwake = false;
+            chaseScreamSource.spatialBlend = 1f;
+            chaseScreamSource.rolloffMode = AudioRolloffMode.Linear;
+            chaseScreamSource.minDistance = 3f;
+            chaseScreamSource.maxDistance = maxChaseDistance;
+        }
         agent.stoppingDistance = Mathf.Min(agent.stoppingDistance, Mathf.Max(0.2f, catchDistance * 0.35f));
         targetSpeed = walkSpeed;
         ApplyFeel(false);
@@ -173,9 +190,15 @@ public class EnemyChasePlayer : MonoBehaviour
 
     void EnterChase()
     {
+        if (state == State.Chase) return;
         state = State.Chase;
         nextRepathTime = 0f;
         ApplyFeel(true);
+        if (chaseScream != null && chaseScreamSource != null && Time.time >= nextScreamTime)
+        {
+            chaseScreamSource.PlayOneShot(chaseScream, chaseScreamVolume);
+            nextScreamTime = Time.time + Mathf.Max(chaseScreamCooldown, chaseScream.length);
+        }
     }
 
     void EnterInvestigate()
